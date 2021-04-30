@@ -8,7 +8,8 @@ const BtczHandler: NextPage = () => {
     <MinerTemplate
       coinType={SupportedCoins.BZE}
       displayName="Bze"
-      blockReward={19.5}
+      // 12.675 = 19.5 - master node 6.825
+      blockReward={12.675}
     />
   );
 };
