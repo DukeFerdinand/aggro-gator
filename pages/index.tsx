@@ -22,10 +22,16 @@ export default function Home() {
         </p>
 
         <div className={styles.grid}>
-          <Link href="/darkfiber">
+          <Link href="/darkfiber/btcz">
             <a className={styles.card}>
               <h2>DarkFiber BtcZ &rarr;</h2>
               <p>Find your payout estimate for the BtcZ pool.</p>
+            </a>
+          </Link>
+          <Link href="/darkfiber/bze">
+            <a className={styles.card}>
+              <h2>DarkFiber Bze &rarr;</h2>
+              <p>Find your payout estimate for the new Bze pool.</p>
             </a>
           </Link>
           <a

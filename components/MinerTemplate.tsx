@@ -2,10 +2,11 @@ import { NextPage } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import styles from "../../styles/DarkFiber.module.css";
+import styles from "../styles/DarkFiber.module.css";
 
-enum SupportedCoins {
-  BtcZ,
+export enum SupportedCoins {
+  BTCZ = "btcz",
+  BZE = "bze",
 }
 
 interface PayoutAndShares {
@@ -15,18 +16,44 @@ interface PayoutAndShares {
   userPercentage: string;
 }
 
-const DarkFiber: NextPage = () => {
+interface MinerTemplateProps {
+  coinType: SupportedCoins;
+  blockReward: number;
+  displayName: string;
+}
+
+const MinerTemplate: React.FC<MinerTemplateProps> = ({
+  coinType,
+  blockReward,
+  displayName,
+}) => {
   const [miner, setMiner] = useState("");
   const [coinStats, setCoinStats] = useState<PayoutAndShares | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [interval, setLocalInterval] = useState(null);
+  const [error, setError] = useState("");
 
   const getMinerData = async () => {
-    const data: PayoutAndShares = await fetch(
-      `/api/btcz/${router.query.miner as string}`
-    ).then((r) => r.json());
-    return data;
+    setError("");
+    try {
+      const data: PayoutAndShares & { error?: string } = await fetch(
+        `/api/coins/${router.query.miner as string}`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            coinType,
+            blockReward,
+          }),
+        }
+      ).then((r) => r.json());
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      return data;
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   useEffect(() => {
@@ -37,11 +64,17 @@ const DarkFiber: NextPage = () => {
         setCoinStats(stats);
 
         setLoading(false);
-        const i = setInterval(async () => {
-          setCoinStats(await getMinerData());
-        }, 1000 * 15);
+        if (!error) {
+          const i = setInterval(async () => {
+            setCoinStats(await getMinerData());
+          }, 1000 * 15);
 
-        setLocalInterval(i);
+          setLocalInterval(i);
+        } else {
+          if (interval !== null) {
+            clearInterval(interval);
+          }
+        }
       }
     };
     handler();
@@ -54,7 +87,7 @@ const DarkFiber: NextPage = () => {
   return (
     <main className={styles.wrapper}>
       <div className={styles.navbar}>
-        <h1>DarkFiber BtcZ stat checker</h1>
+        <h1>DarkFiber coin stat checker</h1>
         <Link href="/">
           <a>Home</a>
         </Link>
@@ -67,7 +100,8 @@ const DarkFiber: NextPage = () => {
         </p>
       </div>
       <div className={styles.container}>
-        <h1>BtcZ stat checker</h1>
+        <h1>{displayName} stats</h1>
+        {error !== "" && <h2>{error}</h2>}
         {loading ? (
           <p>loading...</p>
         ) : (
@@ -83,7 +117,7 @@ const DarkFiber: NextPage = () => {
                   placeholder="Your miner id/wallet"
                 />
                 <button
-                  onClick={() => router.push(`/darkfiber/${miner}`)}
+                  onClick={() => router.push(`/darkfiber/${coinType}/${miner}`)}
                   className={styles.checkButton}
                 >
                   {loading ? "Loading..." : "Check"}
@@ -91,7 +125,7 @@ const DarkFiber: NextPage = () => {
                 <p>
                   * This is only used to securely check your current stats, and
                   is NEVER stored -{" "}
-                  <Link href="https://github.com/DukeFerdinand/aggro-gator/blob/master/pages/api/btcz/%5B...minerId%5D.ts">
+                  <Link href="https://github.com/DukeFerdinand/aggro-gator/blob/master/pages/api/coins/%5B...minerId%5D.ts">
                     <a>source</a>
                   </Link>
                 </p>
@@ -106,13 +140,13 @@ const DarkFiber: NextPage = () => {
                   </colgroup>
                   <thead>
                     <tr>
-                      <th colSpan={3}>Stats refresh every 15 seconds</th>
+                      <th colSpan={3}>Stats auto refresh every 15 seconds</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <th>Group Shares</th>
-                      <td>{coinStats.totalShares}</td>
+                      <td>{coinStats.totalShares.toFixed(5)}</td>
                       <td>The number of shares submitted by everyone</td>
                     </tr>
                     <tr>
@@ -130,12 +164,14 @@ const DarkFiber: NextPage = () => {
                     </tr>
                     <tr>
                       <th>Payout (?)</th>
-                      <td>{coinStats.estimatedPayout.toFixed(6)} BtcZ</td>
                       <td>
-                        The <i>estimated</i> payout. Assumes 12.5k block reward
-                        and is relative to the amount of miners ONLINE. May not
-                        be exact, may not be accurate. Should only be used for
-                        reference
+                        {coinStats.estimatedPayout.toFixed(6)} {displayName}
+                      </td>
+                      <td>
+                        The <i>estimated</i> payout. Assumes {blockReward} block
+                        reward and is relative to the amount of miners ONLINE.
+                        May not be exact, may not be accurate. Should only be
+                        used for reference
                       </td>
                     </tr>
                   </tbody>
@@ -149,4 +185,4 @@ const DarkFiber: NextPage = () => {
   );
 };
 
-export default DarkFiber;
+export default MinerTemplate;

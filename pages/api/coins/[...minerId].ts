@@ -4,10 +4,34 @@ import cheerio from "cheerio";
 import axios from "axios";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
-  const { minerId } = req.query;
-  const URL = "https://btcz.darkfibermines.com";
+  if (req.method !== "POST") {
+    return res.status(408).json({
+      error: "Only POST method is allowed",
+    });
+  }
 
-  // Pull fresh data
+  const { minerId } = req.query;
+  const body = req.body;
+  console.log(body, minerId);
+  let config = {
+    coinType: "",
+    blockReward: 0,
+  };
+  if (body) {
+    const { coinType, blockReward } = JSON.parse(body);
+
+    if (!coinType || !blockReward) {
+      return res.status(405).json({
+        error: "Missing either coinType or blockReward in request",
+      });
+    }
+
+    config.coinType = coinType;
+    config.blockReward = blockReward;
+  }
+  const URL = `https://${config.coinType}.darkfibermines.com`;
+
+  // // Pull fresh data
   const page = await axios.get(URL).catch((e) => {
     throw new Error(e);
   });
@@ -38,7 +62,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
   // Catch missing miner id
   if (!miners[minerId as string]) {
-    return res.status(404).send(`Miner ${minerId} not found`);
+    return res.status(404).json({ error: `Miner '${minerId}' not found` });
   }
 
   const myPercentage = miners[minerId as string] / totalShares;
@@ -47,13 +71,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
   console.log(
     "[your share percentage / estimated payout]",
     myPercentage.toFixed(5) + "%",
-    myPercentage * 12_500
+    myPercentage * config.blockReward
   );
 
   res.json({
     shares: miners[minerId as string],
     totalShares,
     userPercentage: myPercentage.toFixed(5) + "%",
-    estimatedPayout: myPercentage * 12_500,
+    estimatedPayout: myPercentage * config.blockReward,
   });
 };
