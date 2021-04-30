@@ -54,6 +54,8 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
     } catch (e) {
       setError(e.message);
     }
+
+    return null;
   };
 
   useEffect(() => {
@@ -64,7 +66,7 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
         setCoinStats(stats);
 
         setLoading(false);
-        if (!error) {
+        if (!stats) {
           const i = setInterval(async () => {
             setCoinStats(await getMinerData());
           }, 1000 * 15);
@@ -87,7 +89,7 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
   return (
     <main className={styles.wrapper}>
       <div className={styles.navbar}>
-        <h1>DarkFiber coin stat checker</h1>
+        <h1>DarkFiber {displayName} stat checker</h1>
         <Link href="/">
           <a>Home</a>
         </Link>
