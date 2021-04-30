@@ -12,7 +12,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
   const { minerId } = req.query;
   const body = req.body;
-  console.log(body, minerId);
   let config = {
     coinType: "",
     blockReward: 0,
@@ -62,17 +61,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
   // Catch missing miner id
   if (!miners[minerId as string]) {
-    return res.status(404).json({ error: `Miner '${minerId}' not found` });
+    return res
+      .status(404)
+      .json({
+        error: `Miner '${minerId}' not found. Make sure you are using ${config.coinType} wallet!`,
+      });
   }
 
   const myPercentage = miners[minerId as string] / totalShares;
-
-  console.log("[total shares]", totalShares.toFixed(2));
-  console.log(
-    "[your share percentage / estimated payout]",
-    myPercentage.toFixed(5) + "%",
-    myPercentage * config.blockReward
-  );
 
   res.json({
     shares: miners[minerId as string],
