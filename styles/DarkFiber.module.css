@@ -33,8 +33,6 @@
   padding: 0 0.5rem;
   display: flex;
   flex-direction: column;
-  /* justify-content: center; */
-  /* align-items: center; */
   flex: 1;
 }
 
@@ -81,14 +79,17 @@
   background: var(--color-main-hover);
 }
 
+.container a {
+  color: var(--color-main);
+}
+
 .container table {
+  padding: 0.5rem 2rem;
+  border-radius: 5px;
+  background: #333;
   width: 100%;
   table-layout: fixed;
   border-spacing: 0;
-}
-
-.container table tr {
-  border-bottom: 1px solid blue;
 }
 
 .container table th {

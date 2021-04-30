@@ -28,11 +28,14 @@ export default function Home() {
               <p>Find your payout estimate for the BtcZ pool.</p>
             </a>
           </Link>
-          {/* 
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
+          <a
+            href="https://github.com/DukeFerdinand/aggro-gator"
+            className={styles.card}
+          >
+            <h2>Source Code &rarr;</h2>
+            <p>Examin/extend the source code</p>
           </a>
+          {/* 
 
           <a
             href="https://github.com/vercel/next.js/tree/master/examples"

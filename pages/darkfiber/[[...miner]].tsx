@@ -20,10 +20,11 @@ const DarkFiber: NextPage = () => {
   const [coinStats, setCoinStats] = useState<PayoutAndShares | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [interval, setLocalInterval] = useState(null);
 
   const getMinerData = async () => {
     const data: PayoutAndShares = await fetch(
-      `/api/btcz/${router.query.miner}`
+      `/api/btcz/${router.query.miner as string}`
     ).then((r) => r.json());
     return data;
   };
@@ -33,12 +34,21 @@ const DarkFiber: NextPage = () => {
       if (router.query.miner && !coinStats) {
         setLoading(true);
         const stats = await getMinerData();
+        setCoinStats(stats);
 
         setLoading(false);
-        setCoinStats(stats);
+        const i = setInterval(async () => {
+          setCoinStats(await getMinerData());
+        }, 1000 * 15);
+
+        setLocalInterval(i);
       }
     };
     handler();
+
+    return function cleanup() {
+      clearInterval(interval);
+    };
   }, [router, coinStats]);
 
   return (
@@ -64,7 +74,7 @@ const DarkFiber: NextPage = () => {
           <>
             {!coinStats ? (
               <>
-                <label>Miner Id</label>
+                <label>Miner Id (NO .RigName or similar)</label>
                 <input
                   name="miner-id"
                   value={miner}
@@ -78,11 +88,27 @@ const DarkFiber: NextPage = () => {
                 >
                   {loading ? "Loading..." : "Check"}
                 </button>
-                <p>* This is only used to securely check your current stats</p>
+                <p>
+                  * This is only used to securely check your current stats, and
+                  is NEVER stored -{" "}
+                  <Link href="https://github.com/DukeFerdinand/aggro-gator/blob/master/pages/api/btcz/%5B...minerId%5D.ts">
+                    <a>source</a>
+                  </Link>
+                </p>
               </>
             ) : (
               <div>
                 <table>
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th colSpan={3}>Stats refresh every 15 seconds</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     <tr>
                       <th>Group Shares</th>
