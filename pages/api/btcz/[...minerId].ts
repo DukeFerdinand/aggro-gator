@@ -36,6 +36,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     totalShares += shares;
   }
 
+  // Catch missing miner id
+  if (!miners[minerId as string]) {
+    return res.status(404).send(`Miner ${minerId} not found`);
+  }
+
   const myPercentage = miners[minerId as string] / totalShares;
 
   console.log("[total shares]", totalShares.toFixed(2));

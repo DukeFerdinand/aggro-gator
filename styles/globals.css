@@ -1,7 +1,9 @@
 :root {
   --bg-body: #191919;
+  --bg-input: #222222;
   --color-body: #eee7f1;
-  --color-main: #606683;
+  --color-main: #1a2c75;
+  --color-main-hover: #2a3c85;
 }
 
 html,
