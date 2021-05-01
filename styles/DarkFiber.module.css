@@ -1,6 +1,7 @@
 .wrapper {
-  height: 100vh;
-  width: 100vw;
+  min-height: 100vh;
+  width: 100%;
+  /* max-width: 100%; */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -34,11 +35,11 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  /* overflow-y: scroll; */
 }
 
 .container .label {
-  margin-left: 0;
-  margin-right: auto;
+  margin: 0 auto;
 }
 
 .container input {
@@ -79,17 +80,22 @@
   background: var(--color-main-hover);
 }
 
+.container h1 {
+  /* width: 100%; */
+}
+
 .container a {
   color: var(--color-main);
 }
 
 .container table {
-  padding: 0.5rem 2rem;
+  padding: 0.5rem 1rem;
   border-radius: 5px;
   background: #333;
   width: 100%;
   table-layout: fixed;
   border-spacing: 0;
+  margin-bottom: 1rem;
 }
 
 .container table th {

@@ -1,7 +1,7 @@
 import { NextPage } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { Reducer, useEffect, useReducer, useState } from "react";
 import styles from "../styles/DarkFiber.module.css";
 
 export enum SupportedCoins {
@@ -22,37 +22,155 @@ interface MinerTemplateProps {
   displayName: string;
 }
 
+interface MinerPayouts {
+  immature: number;
+  owed: number;
+  paid: number;
+}
+
+enum MinerStateActions {
+  SetMinerID,
+  SetCoinStats,
+  SetPayoutStats,
+
+  // Intevals
+  SetCoinInterval,
+  SetPayoutInterval,
+
+  // Error messages
+  SetPayoutError,
+  SetCoinStatError,
+
+  // UI loaders
+  SetLoadingStats,
+  SetLoadingPayouts,
+}
+
+interface MinerState {
+  // Data
+  minerId: string;
+  coinStats: PayoutAndShares;
+  coinStatInterval: number;
+
+  // Intervals
+  payoutStats: MinerPayouts;
+  payoutStatInterval: number;
+
+  // Errors
+  payoutError: string;
+  coinStatError: string;
+
+  // UI
+  loadingStats: boolean;
+  loadingPayouts: boolean;
+}
+
+interface MinerPayload<T = unknown> {
+  type: MinerStateActions;
+  payload: T;
+}
+
 const MinerTemplate: React.FC<MinerTemplateProps> = ({
   coinType,
   blockReward,
   displayName,
 }) => {
   const [miner, setMiner] = useState("");
-  const [coinStats, setCoinStats] = useState<PayoutAndShares | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [interval, setLocalInterval] = useState(null);
-  const [error, setError] = useState("");
+
+  const [state, dispatch] = useReducer<
+    Reducer<Partial<MinerState>, MinerPayload>
+  >((s, a) => {
+    const MSA = MinerStateActions;
+    switch (a.type) {
+      // Data
+      case MSA.SetMinerID:
+        return { ...s, minerId: a.payload as string };
+      case MSA.SetCoinStats:
+        return { ...s, coinStats: a.payload as PayoutAndShares };
+      case MSA.SetCoinStats:
+        return { ...s, coinStats: a.payload as PayoutAndShares };
+      case MSA.SetPayoutStats:
+        return { ...s, payoutStats: a.payload as MinerPayouts };
+
+      // UI
+      case MSA.SetLoadingPayouts:
+        return { ...s, loadingPayouts: a.payload as boolean };
+      case MSA.SetLoadingStats:
+        return { ...s, loadingStats: a.payload as boolean };
+
+      // Intervals
+      case MSA.SetCoinInterval:
+        return { ...s, coinStatInterval: a.payload as number };
+      case MSA.SetPayoutInterval:
+        return { ...s, payoutStatInterval: a.payload as number };
+
+      // Errors
+      case MSA.SetPayoutError:
+        return { ...s, payoutError: a.payload as string };
+      case MSA.SetCoinStatError:
+        return { ...s, coinStatError: a.payload as string };
+    }
+  }, {});
 
   const getMinerData = async () => {
-    setError("");
     try {
       const data: PayoutAndShares & { error?: string } = await fetch(
-        `/api/coins/${router.query.miner as string}`,
+        `/api/coins/stats`,
         {
           method: "POST",
           body: JSON.stringify({
             coinType,
             blockReward,
+            minerId: state.minerId || router.query.miner,
           }),
         }
       ).then((r) => r.json());
       if (data.error) {
         throw new Error(data.error);
       }
+      dispatch({
+        type: MinerStateActions.SetCoinStatError,
+        payload: "",
+      });
       return data;
     } catch (e) {
-      setError(e.message);
+      dispatch({
+        type: MinerStateActions.SetCoinStatError,
+        payload: e.message,
+      });
+    }
+
+    return null;
+  };
+
+  const getMinerPayouts = async () => {
+    try {
+      const data: MinerPayouts & { error?: string } = await fetch(
+        `/api/coins/payouts`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            minerId: state.minerId || router.query.miner,
+          }),
+        }
+      ).then((r) => r.json());
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      dispatch({
+        type: MinerStateActions.SetPayoutError,
+        payload: "",
+      });
+      return data;
+    } catch (e) {
+      dispatch({
+        type: MinerStateActions.SetPayoutError,
+        payload: e.message,
+      });
     }
 
     return null;
@@ -60,21 +178,70 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
 
   useEffect(() => {
     const handler = async () => {
-      if (router.query.miner && !coinStats) {
-        setLoading(true);
-        const stats = await getMinerData();
-        setCoinStats(stats);
+      if (router.query.miner) {
+        if (!state.coinStats && !state.loadingStats && !state.coinStatError) {
+          dispatch({
+            type: MinerStateActions.SetLoadingStats,
+            payload: true,
+          });
+          const stats = await getMinerData();
+          dispatch({
+            type: MinerStateActions.SetLoadingStats,
+            payload: false,
+          });
+          dispatch({
+            type: MinerStateActions.SetCoinStats,
+            payload: stats,
+          });
+          if (stats) {
+            const i = setInterval(async () => {
+              dispatch({
+                type: MinerStateActions.SetCoinStats,
+                payload: await getMinerData(),
+              });
+            }, 1000 * 15);
 
-        setLoading(false);
-        if (!stats) {
-          const i = setInterval(async () => {
-            setCoinStats(await getMinerData());
-          }, 1000 * 15);
+            dispatch({
+              type: MinerStateActions.SetCoinInterval,
+              payload: i,
+            });
+          } else {
+            if (interval !== null) {
+              clearInterval(interval);
+            }
+          }
+        }
 
-          setLocalInterval(i);
-        } else {
-          if (interval !== null) {
-            clearInterval(interval);
+        if (!state.payoutStats && !state.loadingPayouts && !state.payoutError) {
+          dispatch({
+            type: MinerStateActions.SetLoadingPayouts,
+            payload: true,
+          });
+          const stats = await getMinerPayouts();
+          dispatch({
+            type: MinerStateActions.SetPayoutStats,
+            payload: stats,
+          });
+          dispatch({
+            type: MinerStateActions.SetLoadingPayouts,
+            payload: false,
+          });
+          if (stats) {
+            const i = setInterval(async () => {
+              dispatch({
+                type: MinerStateActions.SetPayoutStats,
+                payload: await getMinerPayouts(),
+              });
+            }, 1000 * 15);
+
+            dispatch({
+              type: MinerStateActions.SetPayoutInterval,
+              payload: i,
+            });
+          } else {
+            if (interval !== null) {
+              clearInterval(interval);
+            }
           }
         }
       }
@@ -82,9 +249,10 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
     handler();
 
     return function cleanup() {
-      clearInterval(interval);
+      clearInterval(state.payoutStatInterval);
+      clearInterval(state.coinStatInterval);
     };
-  }, [router, coinStats]);
+  }, [router, state]);
 
   return (
     <main className={styles.wrapper}>
@@ -102,13 +270,14 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
         </p>
       </div>
       <div className={styles.container}>
-        <h1>{displayName} stats</h1>
-        {error !== "" && <h2>{error}</h2>}
-        {loading ? (
+        <h1>{displayName} payment stats</h1>
+        {state.coinStatError !== "" && <h2>{state.coinStatError}</h2>}
+        {state.payoutError !== "" && <h2>{state.payoutError}</h2>}
+        {state.loadingStats ? (
           <p>loading...</p>
         ) : (
           <>
-            {!coinStats ? (
+            {!state.coinStats ? (
               <>
                 <label>Miner Id (NO .RigName or similar)</label>
                 <input
@@ -127,13 +296,46 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
                 <p>
                   * This is only used to securely check your current stats, and
                   is NEVER stored -{" "}
-                  <Link href="https://github.com/DukeFerdinand/aggro-gator/blob/master/pages/api/coins/%5B...minerId%5D.ts">
+                  <Link href="https://github.com/DukeFerdinand/aggro-gator/blob/master/pages/api/coins/stats.ts">
                     <a>source</a>
                   </Link>
                 </p>
               </>
             ) : (
               <div>
+                <h2>{displayName} payment stats</h2>
+                <table>
+                  <colgroup>
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th colSpan={3}>Stats auto refresh every 60 seconds</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th>Immature</th>
+                      <td>{state.payoutStats?.immature}</td>
+                      <td>Coins not yet confirmed</td>
+                    </tr>
+                    <tr>
+                      <th>Owed</th>
+                      <td>{state.payoutStats?.owed}</td>
+                      <td>
+                        The amount of coins Dark Fiber hasn't sent you yet
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Paid Out</th>
+                      <td>{state.payoutStats?.paid}</td>
+                      <td>The amount of coins already sent to your wallet</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <h2>{displayName} stats</h2>
                 <table>
                   <colgroup>
                     <col />
@@ -148,17 +350,17 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
                   <tbody>
                     <tr>
                       <th>Group Shares</th>
-                      <td>{coinStats.totalShares.toFixed(5)}</td>
+                      <td>{state.coinStats.totalShares.toFixed(5)}</td>
                       <td>The number of shares submitted by everyone</td>
                     </tr>
                     <tr>
                       <th>Your Shares</th>
-                      <td>{coinStats.shares}</td>
+                      <td>{state.coinStats.shares}</td>
                       <td>The number of shares you have submitted</td>
                     </tr>
                     <tr>
                       <th>Effort Percentage</th>
-                      <td>{coinStats.userPercentage}</td>
+                      <td>{state.coinStats.userPercentage}</td>
                       <td>
                         The percentage of shares you have submitted relative to
                         total
@@ -167,7 +369,8 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
                     <tr>
                       <th>Payout (?)</th>
                       <td>
-                        {coinStats.estimatedPayout.toFixed(6)} {displayName}
+                        {state.coinStats.estimatedPayout.toFixed(6)}{" "}
+                        {displayName}
                       </td>
                       <td>
                         The <i>estimated</i> payout. Assumes {blockReward} block

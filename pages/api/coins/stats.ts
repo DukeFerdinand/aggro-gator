@@ -10,23 +10,24 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     });
   }
 
-  const { minerId } = req.query;
   const body = req.body;
   let config = {
     coinType: "",
     blockReward: 0,
+    minerId: "",
   };
   if (body) {
-    const { coinType, blockReward } = JSON.parse(body);
+    const { coinType, blockReward, minerId } = JSON.parse(body);
 
-    if (!coinType || !blockReward) {
-      return res.status(405).json({
-        error: "Missing either coinType or blockReward in request",
+    if (!coinType || !blockReward || !minerId) {
+      return res.status(400).json({
+        error: "Missing one of: coinType, blockReward, minerId in request",
       });
     }
 
     config.coinType = coinType;
     config.blockReward = blockReward;
+    config.minerId = minerId;
   }
   const URL = `https://${config.coinType}.darkfibermines.com`;
 
@@ -60,18 +61,16 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   // Catch missing miner id
-  if (!miners[minerId as string]) {
-    return res
-      .status(404)
-      .json({
-        error: `Miner '${minerId}' not found. Make sure you are using ${config.coinType} wallet!`,
-      });
+  if (!miners[config.minerId]) {
+    return res.status(404).json({
+      error: `Miner '${config.minerId}' not found. Make sure you are using ${config.coinType} wallet!`,
+    });
   }
 
-  const myPercentage = miners[minerId as string] / totalShares;
+  const myPercentage = miners[config.minerId] / totalShares;
 
   res.json({
-    shares: miners[minerId as string],
+    shares: miners[config.minerId],
     totalShares,
     userPercentage: myPercentage.toFixed(5) + "%",
     estimatedPayout: myPercentage * config.blockReward,
