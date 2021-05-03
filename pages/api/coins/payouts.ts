@@ -1,3 +1,4 @@
+import chrome from "chrome-aws-lambda";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import puppeteer from "puppeteer";
@@ -14,6 +15,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
       error: "Request method must be POST",
     });
   }
+  const isDev = process.env.NODE_ENV === "development";
   const { minerId, coinType } = JSON.parse(req.body);
   if (!minerId) {
     return res.status(400).json({
@@ -22,7 +24,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   // Everything good, perform check
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch(
+    isDev
+      ? undefined
+      : {
+          args: chrome.args,
+          executablePath: await chrome.executablePath,
+          headless: chrome.headless,
+        }
+  );
   const page = await browser.newPage();
 
   await page.goto(`https://${coinType}.darkfibermines.com/workers/${minerId}`);
