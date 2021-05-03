@@ -8,7 +8,7 @@ const BtczHandler: NextPage = () => {
     <MinerTemplate
       coinType={SupportedCoins.BTCZ}
       displayName="BtcZ"
-      blockReward={12_5000}
+      blockReward={12_500}
     />
   );
 };

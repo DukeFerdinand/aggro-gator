@@ -2,13 +2,19 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import puppeteer from "puppeteer";
 
+export interface PayoutResponse {
+  immature: string;
+  owed: string;
+  paid: string;
+}
+
 export default async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== "POST") {
     return res.status(408).json({
       error: "Request method must be POST",
     });
   }
-  const { minerId } = JSON.parse(req.body);
+  const { minerId, coinType } = JSON.parse(req.body);
   if (!minerId) {
     return res.status(400).json({
       error: "Missing required minerId",
@@ -19,30 +25,36 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
-  await page.goto(`https://bze.darkfibermines.com/workers/${minerId}`);
+  await page.goto(`https://${coinType}.darkfibermines.com/workers/${minerId}`);
 
   const data = await page.$$eval("#topCharts", async (e) => {
-    let d = {
-      immature: "0",
-      owed: "0",
-      paid: "0",
-    };
-    await new Promise<void>((res, rej) => {
+    return await new Promise<{}>((res, rej) => {
+      let d = {
+        immature: "0",
+        owed: "0",
+        paid: "0",
+      };
       setTimeout(() => {
-        const immature = document.querySelector("#statsTotalImmature")
-          .textContent;
-        const owed = document.querySelector("#statsTotalBal").textContent;
-        const paid = document.querySelector("#statsTotalPaid").textContent;
-        d.immature = immature;
-        d.owed = owed;
-        d.paid = paid;
+        const immature = document.querySelector<HTMLSpanElement>(
+          "#statsTotalImmature"
+        ).innerText;
+        const owed = document.querySelector<HTMLSpanElement>("#statsTotalBal")
+          .innerText;
+        const paid = document.querySelector<HTMLSpanElement>("#statsTotalPaid")
+          .innerText;
 
-        res();
-      }, 1000);
+        console.log(d);
+
+        res({
+          immature,
+          owed,
+          paid,
+        });
+      }, 3000);
     });
-
-    return d;
   });
+
+  console.log(data);
 
   res.json({
     ...data,

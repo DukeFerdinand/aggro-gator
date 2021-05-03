@@ -69,10 +69,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
   const myPercentage = miners[config.minerId] / totalShares;
 
+  console.log(myPercentage, config.blockReward);
+
   res.json({
     shares: miners[config.minerId],
     totalShares,
-    userPercentage: myPercentage.toFixed(5) + "%",
+    userPercentage: (myPercentage * 100).toFixed(5) + "%",
     estimatedPayout: myPercentage * config.blockReward,
   });
 };

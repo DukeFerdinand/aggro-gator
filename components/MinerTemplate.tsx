@@ -76,9 +76,7 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
   displayName,
 }) => {
   const [miner, setMiner] = useState("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const [interval, setLocalInterval] = useState(null);
 
   const [state, dispatch] = useReducer<
     Reducer<Partial<MinerState>, MinerPayload>
@@ -154,6 +152,7 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
           method: "POST",
           body: JSON.stringify({
             minerId: state.minerId || router.query.miner,
+            coinType,
           }),
         }
       ).then((r) => r.json());
@@ -179,6 +178,7 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
   useEffect(() => {
     const handler = async () => {
       if (router.query.miner) {
+        // Coin stats
         if (!state.coinStats && !state.loadingStats && !state.coinStatError) {
           dispatch({
             type: MinerStateActions.SetLoadingStats,
@@ -206,12 +206,13 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
               payload: i,
             });
           } else {
-            if (interval !== null) {
-              clearInterval(interval);
+            if (state.coinStatInterval !== null) {
+              clearInterval(state.coinStatInterval);
             }
           }
         }
 
+        // Payment stats
         if (!state.payoutStats && !state.loadingPayouts && !state.payoutError) {
           dispatch({
             type: MinerStateActions.SetLoadingPayouts,
@@ -232,15 +233,15 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
                 type: MinerStateActions.SetPayoutStats,
                 payload: await getMinerPayouts(),
               });
-            }, 1000 * 15);
+            }, 1000 * 60);
 
             dispatch({
               type: MinerStateActions.SetPayoutInterval,
               payload: i,
             });
           } else {
-            if (interval !== null) {
-              clearInterval(interval);
+            if (state.payoutStatInterval !== null) {
+              clearInterval(state.payoutStatInterval);
             }
           }
         }
@@ -291,7 +292,7 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
                   onClick={() => router.push(`/darkfiber/${coinType}/${miner}`)}
                   className={styles.checkButton}
                 >
-                  {loading ? "Loading..." : "Check"}
+                  {state.loadingStats ? "Loading..." : "Check"}
                 </button>
                 <p>
                   * This is only used to securely check your current stats, and
@@ -303,7 +304,7 @@ const MinerTemplate: React.FC<MinerTemplateProps> = ({
               </>
             ) : (
               <div>
-                <h2>{displayName} payment stats</h2>
+                <h2>{displayName} payments (BETA)</h2>
                 <table>
                   <colgroup>
                     <col />
