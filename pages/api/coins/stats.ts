@@ -63,7 +63,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
   // Catch missing miner id
   if (!miners[config.minerId]) {
     return res.status(404).json({
-      error: `Miner '${config.minerId}' not found. Make sure you are using ${config.coinType} wallet!`,
+      error: `Miner '${config.minerId}' not found. Make sure you are using a ${config.coinType} wallet and DO NOT include your rig name!`,
     });
   }
 
