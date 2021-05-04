@@ -53,8 +53,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         const paid = document.querySelector<HTMLSpanElement>("#statsTotalPaid")
           .innerText;
 
-        console.log(d);
-
         res({
           immature,
           owed,
