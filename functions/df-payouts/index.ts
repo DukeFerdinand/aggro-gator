@@ -1,23 +1,15 @@
+import type { Request, Response } from "express";
 import chrome from "chrome-aws-lambda";
-import type { NextApiRequest, NextApiResponse } from "next";
-
 import puppeteer from "puppeteer";
 
-export interface PayoutResponse {
-  immature: string;
-  owed: string;
-  paid: string;
-}
-
-export default async (req: NextApiRequest, res: NextApiResponse) => {
+export const payoutsFunction = async (req: Request, res: Response) => {
   if (req.method !== "POST") {
     return res.status(408).json({
       error: "Request method must be POST",
     });
   }
-  console.log(req.body);
   const isDev = process.env.NODE_ENV === "development";
-  const { minerId, coinType } = JSON.parse(req.body);
+  const { minerId, coinType } = req.body;
   if (!minerId) {
     return res.status(400).json({
       error: "Missing required minerId",
@@ -27,7 +19,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
   // Everything good, perform check
   const browser = await puppeteer.launch(
     isDev
-      ? undefined
+      ? { headless: true }
       : {
           args: chrome.args,
           executablePath: await chrome.executablePath,
@@ -40,11 +32,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
   const data = await page.$$eval("#topCharts", async (e) => {
     return await new Promise<{}>((res, rej) => {
-      let d = {
-        immature: "0",
-        owed: "0",
-        paid: "0",
-      };
       setTimeout(() => {
         const immature = document.querySelector<HTMLSpanElement>(
           "#statsTotalImmature"
