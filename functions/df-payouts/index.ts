@@ -46,7 +46,7 @@ export const payoutsFunction = async (req: Request, res: Response) => {
           owed,
           paid,
         });
-      }, 3000);
+      }, 250);
     });
   });
 
