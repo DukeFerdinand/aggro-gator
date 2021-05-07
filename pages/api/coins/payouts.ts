@@ -1,7 +1,4 @@
-import chrome from "chrome-aws-lambda";
 import type { NextApiRequest, NextApiResponse } from "next";
-
-import puppeteer from "puppeteer";
 
 export interface PayoutResponse {
   immature: string;
@@ -9,61 +6,40 @@ export interface PayoutResponse {
   paid: string;
 }
 
+export interface WorkerStats {
+  miner: string;
+  totalHash: number; // likely float;
+  totalShares: number; // likely float;
+  networkSols: string; // string wrapped number;
+  immature: number; // likely float;
+  balance: number; // likely 0;
+  paid: number; // likely float;
+}
+
+const BASE_URL =
+  "https://{COIN_TYPE}.darkfibermines.com/api/worker_stats?{MINER_ID}";
+
 export default async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== "POST") {
     return res.status(408).json({
       error: "Request method must be POST",
     });
   }
-  console.log(req.body);
-  const isDev = process.env.NODE_ENV === "development";
-  const { minerId, coinType } = JSON.parse(req.body);
-  if (!minerId) {
+
+  const { minerId, coinType } = req.body;
+  if (!minerId || !coinType) {
     return res.status(400).json({
-      error: "Missing required minerId",
+      error: "Missing required minerId or coinType",
     });
   }
 
-  // Everything good, perform check
-  const browser = await puppeteer.launch(
-    isDev
-      ? undefined
-      : {
-          args: chrome.args,
-          executablePath: await chrome.executablePath,
-          headless: chrome.headless,
-        }
-  );
-  const page = await browser.newPage();
-
-  await page.goto(`https://${coinType}.darkfibermines.com/workers/${minerId}`);
-
-  const data = await page.$$eval("#topCharts", async (e) => {
-    return await new Promise<{}>((res, rej) => {
-      let d = {
-        immature: "0",
-        owed: "0",
-        paid: "0",
-      };
-      setTimeout(() => {
-        const immature = document.querySelector<HTMLSpanElement>(
-          "#statsTotalImmature"
-        ).innerText;
-        const owed = document.querySelector<HTMLSpanElement>("#statsTotalBal")
-          .innerText;
-        const paid = document.querySelector<HTMLSpanElement>("#statsTotalPaid")
-          .innerText;
-
-        res({
-          immature,
-          owed,
-          paid,
-        });
-      }, 3000);
-    });
-  });
+  const data: WorkerStats = await fetch(
+    BASE_URL.replace("{COIN_TYPE}", coinType).replace("{MINER_ID}", minerId)
+  ).then((res) => res.json());
 
   res.json({
-    ...data,
-  });
+    immature: data.immature.toFixed(5),
+    owed: data.balance.toFixed(5),
+    paid: data.paid.toFixed(5),
+  } as PayoutResponse);
 };

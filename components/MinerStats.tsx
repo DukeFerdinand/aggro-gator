@@ -32,6 +32,9 @@ export const MinerStatTable: React.FC<MinerStatTableProps> = ({
         `/api/coins/stats`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             minerId,
             coinType,

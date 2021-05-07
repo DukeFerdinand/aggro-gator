@@ -29,6 +29,9 @@ export const MinerPaymentTable: React.FC<MinerPaymentTableProps> = ({
         `/api/coins/payouts`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             minerId,
             coinType,

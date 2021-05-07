@@ -17,7 +17,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     minerId: "",
   };
   if (body) {
-    const { coinType, blockReward, minerId } = JSON.parse(body);
+    const { coinType, blockReward, minerId } = body;
 
     if (!coinType || !blockReward || !minerId) {
       return res.status(400).json({
