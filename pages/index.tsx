@@ -39,7 +39,7 @@ export default function Home() {
             className={styles.card}
           >
             <h2>Source Code &rarr;</h2>
-            <p>Examin/extend the source code</p>
+            <p>Examine/extend the source code</p>
           </a>
           {/* 
 
